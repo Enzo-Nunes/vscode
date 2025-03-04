@@ -202,14 +202,15 @@ export class LineCommentCommand implements ICommand {
 	/**
 	 * Given a successful analysis, execute either insert line comments, either remove line comments
 	 */
-	private _executeLineComments(model: ISimpleModel, builder: IEditOperationBuilder, data: IPreflightDataSupported, s: Selection): void {
+	private _executeLineComments(model: ITextModel, builder: IEditOperationBuilder, data: IPreflightDataSupported, s: Selection): void {
 
 		let ops: ISingleEditOperation[];
+		const languageId = model.getLanguageIdAtPosition(s.startLineNumber, 1);
 
 		if (data.shouldRemoveComments) {
 			ops = LineCommentCommand._createRemoveLineCommentsOperations(data.lines, s.startLineNumber);
 		} else {
-			LineCommentCommand._normalizeInsertionPoint(model, data.lines, s.startLineNumber, this._indentSize);
+			LineCommentCommand._normalizeInsertionPoint(model, data.lines, s.startLineNumber, this._indentSize, languageId);
 			ops = this._createAddLineCommentsOperations(data.lines, s.startLineNumber);
 		}
 
@@ -430,10 +431,21 @@ export class LineCommentCommand implements ICommand {
 	/**
 	 * Adjust insertion points to have them vertically aligned in the add line comment case
 	 */
-	public static _normalizeInsertionPoint(model: ISimpleModel, lines: IInsertionPoint[], startLineNumber: number, indentSize: number): void {
+	public static _normalizeInsertionPoint(model: ISimpleModel, lines: IInsertionPoint[], startLineNumber: number, indentSize: number, languageId: string = ''): void {
 		let minVisibleColumn = Constants.MAX_SAFE_SMALL_INTEGER;
 		let j: number;
 		let lenJ: number;
+
+		// If we're dealing with a makefile, all comment tokens should be placed on column 0
+		if (languageId === 'makefile') {
+			for (let i = 0, len = lines.length; i < len; i++) {
+				if (lines[i].ignore) {
+					continue;
+				}
+				lines[i].commentStrOffset = 0;
+			}
+			return;
+		}
 
 		for (let i = 0, len = lines.length; i < len; i++) {
 			if (lines[i].ignore) {

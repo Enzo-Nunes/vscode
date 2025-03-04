@@ -177,7 +177,7 @@ suite('Editor Contrib - Line Comment Command', () => {
 
 	test('_normalizeInsertionPoint', () => {
 
-		const runTest = (mixedArr: any[], tabSize: number, expected: number[], testName: string) => {
+		const runTest = (mixedArr: any[], tabSize: number, expected: number[], testName: string, languageId: string = '') => {
 			const model = createSimpleModel(mixedArr.filter((item, idx) => idx % 2 === 0));
 			const offsets = mixedArr.filter((item, idx) => idx % 2 === 1).map(offset => {
 				return {
@@ -185,10 +185,20 @@ suite('Editor Contrib - Line Comment Command', () => {
 					ignore: false
 				};
 			});
-			LineCommentCommand._normalizeInsertionPoint(model, offsets, 1, tabSize);
+			LineCommentCommand._normalizeInsertionPoint(model, offsets, 1, tabSize, languageId);
 			const actual = offsets.map(item => item.commentStrOffset);
 			assert.deepStrictEqual(actual, expected, testName);
 		};
+
+		// Test for makefile. function output should always be '0'
+		runTest([
+			'\t\t\tXX', 3,
+			'    \tYY', 5,
+			'        ZZ', 8,
+			'\t\tTT', 2,
+			'SS', 0
+		], 4, [0, 0, 0, 0, 0], 'Makefile test', 'makefile');
+
 
 		// Bug 16696:[comment] comments not aligned in this case
 		runTest([
